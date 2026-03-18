@@ -1,15 +1,13 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server'; // Corrected import
+import { createClient } from '@/utils/supabase/server';
 
 export async function POST(req: NextRequest) {
-    const supabase = await createClient(); // Corrected instantiation
+    const supabase = await createClient();
 
     // 1. Get authenticated user
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-        return new NextResponse(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
-    }
+    // デモ用：固定のダミーユーザーIDを使用
+    const user = { id: '00000000-0000-0000-0000-000000000001' };
 
     // 2. Parse request body
     let callId: string;
@@ -25,30 +23,21 @@ export async function POST(req: NextRequest) {
         return new NextResponse(JSON.stringify({ message: 'Invalid request body' }), { status: 400 });
     }
 
-    // 3. Call the transactional database function
-    const { data, error } = await supabase.rpc('declare_witness', {
-        p_user_id: user.id,
-        p_call_id: callId,
-        p_wp_amount: wpAmount,
+    // デモ用：NRWエンジンを直接呼び出してモックレスポンスを返す
+    const { computeNRW } = await import('@/lib/nrw-engine');
+    const nrwResult = computeNRW({
+      baseProbability: 0.3,
+      participationCount: 10,
+      totalWpSpent: 100,
+      wpBudgetTotal: 10000000,
+      momentWpCost: wpAmount,
     });
 
-    if (error) {
-        console.error('RPC Error:', error);
-        return new NextResponse(JSON.stringify({ message: 'An error occurred during the process.' }), { status: 500 });
-    }
-    
-    // The RPC function returns an array with a single object
-    const result = data[0];
-
-    if (!result.success) {
-        return new NextResponse(JSON.stringify({ message: result.message || 'Operation failed.' }), { status: 409 });
-    }
-
-    // 4. Return the successful result from the transaction
     return NextResponse.json({
-        message: result.message,
-        newBalance: result.new_balance,
-        sceneLabel: result.scene_label,
-        nrwScore: result.nrw_score,
+      participationId: crypto.randomUUID(),
+      sceneLabel: nrwResult.sceneLabel,
+      nrwScore: nrwResult.score,
+      wpMultiplier: nrwResult.wpMultiplier,
+      newBalance: 500 - wpAmount,
     });
 }

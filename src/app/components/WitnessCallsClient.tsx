@@ -197,7 +197,7 @@ export default function WitnessCallsClient({
         }
 
         setParticipated((prev) => new Set([...prev, moment.id]));
-        setBalance(result.newBalance ?? balance - moment.wp_cost);
+        setBalance((prev) => prev - moment.wp_cost);
         const cfg = SCENE_CONFIG[result.sceneLabel] ?? SCENE_CONFIG.COMMON;
         addToast('success', `✨ ${cfg.label} 獲得！ NRWスコア: ${Number(result.nrwScore).toFixed(4)}`);
       } catch {
